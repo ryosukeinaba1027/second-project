@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>制限区域内安全クイズ（基本編）</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 10px;
+        }
+        .quiz-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #004d99;
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #004d99;
+            padding-bottom: 8px;
+            font-size: 1.5em;
+        }
+        h2 {
+            color: #007bff;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 5px;
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+        .question-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .question-text {
+            font-size: 1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .answer-option {
+            display: block;
+            margin-bottom: 8px;
+            padding: 12px;
+            border-radius: 6px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            line-height: 1.4;
+        }
+        .answer-option input[type="radio"] {
+            margin-right: 8px;
+        }
+        .answer-option:hover:not(.answered) {
+            background-color: #e6f7ff;
+        }
+        .answer-option.answered {
+            cursor: default;
+        }
+        .answer-option.correct {
+            background-color: #d4edda;
+            border-color: #1e7e34;
+        }
+        .answer-option.incorrect {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+        }
+        .rationale {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            line-height: 1.5;
+            font-weight: bold;
+        }
+        .rationale.correct {
+            background-color: #c3e6cb;
+            color: #155724;
+        }
+        .rationale.incorrect {
+            background-color: #f5c6cb;
+            color: #721c24;
+        }
+        .submit-btn, .save-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+            text-align: center;
+        }
+        .save-btn {
+            background-color: #28a745;
+        }
+        .save-btn:hover {
+            background-color: #1e7e34;
+        }
+        .submit-btn:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .submit-btn:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+        #results {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #eaf3ff;
+            border: 1px solid #cce5ff;
+        }
+        .score-info {
+            font-size: 1.5em;
+            color: #28a745;
+        }
+        .hint-text {
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+            padding: 8px;
+            border-left: 3px solid #ffc107;
+            background-color: #fffbe6;
+        }
+        .analysis-detail {
+            text-align: left;
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f4f4f4;
+        }
+        .radar-chart {
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin-top: 15px;
+        }
+        .radar-chart .low { color: #dc3545; font-weight: bold; }
+        .radar-chart .mid { color: #ffc107; font-weight: bold; }
+            .radar-chart .high { color: #28a745; font-weight: bold; }
+
+        @media (max-width: 600px) {
+            body { padding: 5px; }
+            .quiz-container { padding: 10px; }
+            .radar-chart { font-size: 0.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h1>東京国際空港 制限区域内安全クイズ（基本編）</h1>
+        <form id="quiz-form">
+            <div id="quiz-content">
+                </div>
+            <button type="button" id="show-results-btn" class="submit-btn" disabled>結果を表示 (0/10 問解答)</button>
+        </form>
+        
+        <div id="results" style="display:none;">
+            </div>
+    </div>
+
+    <script>
+        // --- 起動時にLocalStorageの回答データを全てクリアする関数 ---
+        function forceClearLocalStorage() {
+            // q0からq9まで、全ての回答データを削除
+            for (let i = 0; i < 10; i++) {
+                localStorage.removeItem(`q${i}`);
+            }
+        }
+        // クイズコード実行前に強制クリア
+        forceClearLocalStorage();
+
+        const quizData = {
+          "questions": [
+            {
+              "questionNumber": 1,
+              "question": "制限区域内での行動において、最も優先すべき事項は何ですか。",
+              "category": "航空機優先・接近",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "工事の進捗を最速で完了させること", "rationale": "工事の効率も重要ですが、制限区域内では航空機の安全が全ての活動に優先されます。", "isCorrect": false },
+                { "text": "航空機の運航を絶対に妨げないこと", "rationale": "制限区域内では、いかなる場合でも航空機の運航が最優先であり、これを妨げる行為は厳禁です。", "isCorrect": true },
+                { "text": "車両の通行ルートを厳守し、速度を出すこと", "rationale": "制限速度の厳守は必須ですが、航空機の運航優先という基本原則を上回るものではありません。", "isCorrect": false },
+                { "text": "外周フェンスに近づき、対人センサーの動作を確認すること", "rationale": "外周フェンスへの接近は、対人センサーがあるため禁止されています。", "isCorrect": false }
+              ],
+              "hint": "制限区域内の全ての活動を支配する、最も根本的な原則を思い出しましょう。"
+            },
+            {
+              "questionNumber": 2,
+              "question": "制限区域内の**場周道路**を走行する際の**最高制限速度**はいくらですか。",
+              "category": "車両運行・速度",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "時速30 km/h", "rationale": "時速30 km/hは、車両通路や保安道路の制限速度です。", "isCorrect": false },
+                { "text": "時速15 km/h", "rationale": "時速15 km/hは、マリントンネルや航空機周辺の制限速度です。", "isCorrect": false },
+                { "text": "時速40 km/h", "rationale": "場周道路は空港施設の維持管理のために設けられた道路であり、最高制限速度は時速40 km/hです。", "isCorrect": true },
+                { "text": "時速50 km/h", "rationale": "制限区域内での制限速度は、最も速い場周道路でも時速40 km/hです。", "isCorrect": false }
+              ],
+              "hint": "車両が通行できる道のうち、最も広い範囲の道路の制限速度を思い出しましょう。"
+            },
+            {
+              "questionNumber": 3,
+              "question": "制限区域内で作業員が常に携帯し、身につけていなければならないものは何ですか。",
+              "category": "ID・識別・資格",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "車両用の識別旗", "rationale": "車両識別旗は車両に装着するもので、作業員が身につけるものではありません。", "isCorrect": false },
+                { "text": "公的証明書（運転免許証など）のコピー", "rationale": "公的証明書は本人確認に使用しますが、常に身につけるのは個人識別票とIDカードです。", "isCorrect": false },
+                { "text": "個人識別票およびIDカード", "rationale": "個人識別票およびIDカードは、作業中や運転中、常に首から掛けて携帯しておくことが義務付けられています。", "isCorrect": true },
+                { "text": "所属会社の社員証", "rationale": "社員証は公的証明書の代わりにはなり得ず、制限区域内では個人識別票とIDカードの携帯が必須です。", "isCorrect": false }
+              ],
+              "hint": "制限区域内への立ち入りのために、事務所で受け取る最も重要な身分証を思い出しましょう。"
+            },
+            {
+              "questionNumber": 4,
+              "question": "滑走路や誘導路で車両を**駐車**する際、連絡車やトイレ車は、滑走路・誘導路に対してどのような向きで駐車しなければなりませんか。",
+              "category": "車両運行・一般ルール",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "滑走路・誘導路に対して直角（正面）に向ける。", "rationale": "滑走路や誘導路に直角に駐車することは、運用上の危険があるため禁止されています。", "isCorrect": false },
+                { "text": "滑走路・誘導路に対して平行に向ける。", "rationale": "連絡車やトイレ車の駐車は、滑走路・誘導路に対して平行に行うことが定められています。", "isCorrect": true },
+                { "text": "進行方向に合わせて斜め45度に向ける。", "rationale": "規定されている駐車方法は、滑走路・誘導路に対して平行である必要があります。", "isCorrect": false },
+                { "text": "ショルダー側（路肩）に向かって正面から駐車する。", "rationale": "ショルダー側に向かって駐車することは禁止されています。", "isCorrect": false }
+              ],
+              "hint": "航空機の安全な通行を確保するために、車両の機体が滑走路に影響を与えないような向きを考えましょう。"
+            },
+            {
+              "questionNumber": 5,
+              "question": "制限区域内で**事故（人身事故や車両事故など）が発生**した場合、現場の作業員が直ちに取るべき最初の行動は何ですか。",
+              "category": "緊急時・通報",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "人命救助および被害拡大防止の措置を最優先で実施する。", "rationale": "事故発生時、人命救助と被害拡大防止が最優先の措置であり、その後速やかに元請職員へ報告する必要があります。", "isCorrect": true },
+                { "text": "現場の状況を写真に撮り、事故発生から30分以内に元請職員にメールで送る。", "rationale": "写真撮影よりも、人命救助と口頭での迅速な報告が優先されます。", "isCorrect": false },
+                { "text": "管制塔に無線で直接連絡し、滑走路の閉鎖を要請する。", "rationale": "現場の作業員はまず元請職員に報告し、管制塔への連絡は元請職員を通して行われます。", "isCorrect": false },
+                { "text": "動かせる車両は全て安全な場所へ移動させ、交通を確保する。", "rationale": "やむを得ない場合を除き、事故現場の保存を図ることも重要です。人命救助が最優先です。", "isCorrect": false }
+              ],
+              "hint": "緊急時における最優先事項は、何よりも人命に関わる事柄です。"
+            },
+            {
+              "questionNumber": 6,
+              "question": "制限区域内での**FOD（異物・忘れ物）防止対策**として、**誤っているもの**はどれですか。",
+              "category": "FOD・環境・施設保護",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "使用する台車はストッパー付きのもの以外、使用を禁止する。", "rationale": "台車の逸走事故を避けるため、ストッパー付き以外の使用は禁止されています。", "isCorrect": false },
+                { "text": "作業終了時は、作業員が横一列に並び、施工範囲の忘れ物がないか歩き確認する。", "rationale": "作業終了時の施工範囲の忘れ物確認として、この方法は正式に定められています。", "isCorrect": false },
+                { "text": "各工事車両の持ち込み資材は、管理者がリストを作成し、ダブルチェックを行う。", "rationale": "持ち込み品の点検のため、乗載備品管理簿を用いたダブルチェックの実施が定められています。", "isCorrect": false },
+                { "text": "工具に所属を明示し、滑走路や誘導路の上に置き忘れても問題ない。", "rationale": "工具・機材を滑走路や誘導路上に置き忘れることはFOD事故に直結するため、厳禁です。", "isCorrect": true }
+              ],
+              "hint": "空港での「忘れ物」や「落下物」が航空機に与える影響の大きさを考えてください。"
+            },
+            {
+              "questionNumber": 7,
+              "question": "車両の**後退時**、周囲に注意喚起するために鳴らすクラクションの回数は何回ですか。",
+              "category": "車両運行・一般ルール",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "1回", "rationale": "1回は前進時の回数です。", "isCorrect": false },
+                { "text": "2回", "rationale": "後退時は、前進時よりも注意喚起を徹底するため、クラクションを2回鳴らすことが定められています。", "isCorrect": true },
+                { "text": "3回", "rationale": "規定されている回数は2回です。", "isCorrect": false },
+                { "text": "連続して鳴らす", "rationale": "後退時の規定回数は2回です。", "isCorrect": false }
+              ],
+              "hint": "前進と後退で、危険度の高さに合わせた回数が定められています。"
+            },
+            {
+              "questionNumber": 8,
+              "question": "マリントンネルやPBB（搭乗橋）下など、高さ制限がある場所で車両を走行させる際の**最も厳しい制限高**はいくらですか。",
+              "category": "車両運行・速度",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "3.8 m以下", "rationale": "マリントンネル、PBB下部、GSE地下通路などは3.8 m以下ですが、第2旅客ターミナルビル本館南ピア接続部下はより厳しい3.6 m以下です。", "isCorrect": false },
+                { "text": "4.5 m以下", "rationale": "4.5 m以下はサウストンネルの制限高です。", "isCorrect": false },
+                { "text": "3.6 m以下", "rationale": "第2旅客ターミナルビル本館南ピア接続部下の制限高は3.6 m以下であり、これが最も低い高さ制限です。", "isCorrect": true },
+                { "text": "3.0 m以下", "rationale": "制限高は場所によって異なりますが、最も低いのは3.6 m以下です。", "isCorrect": false }
+              ],
+              "hint": "制限高は3.8 mの場所が多いですが、旅客ターミナルに接続する特定箇所には、さらに厳しい制限があります。"
+            },
+            {
+              "questionNumber": 9,
+              "question": "滑走路や誘導路の**センターライン**の真上にある埋設航空灯火（緑色）は、走行してもよいですか。",
+              "category": "航空灯火・施設保護",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "はい、埋設灯火上なので走行しても問題ありません。", "rationale": "埋設灯火は走行可能ですが、マニュアルでは「極力走行しないこと」が求められています。", "isCorrect": false },
+                { "text": "いいえ、埋設灯火であっても、接触・破損の危険があるため走行は厳禁です。", "rationale": "埋設灯火は走行可能ですが、「極力走行しないこと」が正しい指示です。", "isCorrect": false },
+                { "text": "走行は可能ですが、安全確保のため**極力走行しない**ことが望ましいです。", "rationale": "埋設航空灯火上は走行可能ですが、安全運用のため、極力走行を避けるよう指示されています。", "isCorrect": true },
+                { "text": "灯火が埋設されているため、走行は完全に禁止されています。", "rationale": "灯火が埋設されているため走行は可能ですが、極力避けるべきとされています。", "isCorrect": false }
+              ],
+              "hint": "走行は可能ですが、マニュアルでは「推奨」されているか「避けるべき」とされているかを思い出しましょう。"
+            },
+            {
+              "questionNumber": 10,
+              "question": "サービスレーンを**横断**する際、最も重要で絶対に守らなければならないルールは何ですか。",
+              "category": "サービスレーン・特定区域",
+              "imageUrl": null,
+              "answerOptions": [
+                { "text": "時速30 km/hの制限速度を守り、速やかに横断を完了させること。", "rationale": "サービスレーンの通過は迅速に行うべきですが、一時停止と安全確認が最も優先されます。", "isCorrect": false },
+                { "text": "自力走行中の航空機が50 m以内に近づいている場合のみ、停止線で一時停止すること。", "rationale": "航空機が100 m以内に近づいている場合は走行禁止であり、また一時停止は航空機の有無に関わらず、停止線手前で必ず行う必要があります。", "isCorrect": false },
+                { "text": "停止線表示の手前で**必ず一時停止**を行い、航空機の走行がないことを目視で確認してから横断すること。", "rationale": "サービスレーンは航空機の動線と交差するため、停止線での一時停止と左右の航空機走行がないことの確認が最も重要です。", "isCorrect": true },
+                { "text": "管制塔と無線連絡を取り、管制官の許可を得てから横断すること。", "rationale": "サービスレーンは航空機走行区域外であり、通常、横断に管制塔の無線許可は不要ですが、一時停止と目視確認は必須です。", "isCorrect": false }
+              ],
+              "hint": "航空機との衝突を絶対に避けるために、道路交通法上の「踏切」のような行動を思い出しましょう。"
+            }
+          ]
+        };
+        
+        // 8分野に統合するためのマッピング
+        const CATEGORY_GROUPS = {
+            "ID・識別・資格": ["ID・車両識別管理"],
+            "航空機優先・接近": ["航空機優先・接近"],
+            "車両運行・一般ルール": ["車両運行・経路", "車両運行・速度", "夜間・健康管理"],
+            "サービスレーン・特定区域": ["サービスレーン・横断"],
+            "航空灯火・施設保護": ["航空灯火・施設保護"],
+            "FOD・環境・施設保護": ["FOD・遺失物防止", "油漏れ・飛散防止", "火気・飛散防止"],
+            "緊急時・通報": ["緊急時対応・通報"],
+            "管制・無線・一般禁止": ["無線交信・管制", "一般禁止事項"]
+        };
+        
+        let currentAnswers = {};
+        let isQuizCompleted = false;
+
+        function getCategoryGroup(category) {
+            for (const group in CATEGORY_GROUPS) {
+                if (CATEGORY_GROUPS[group].includes(category)) {
+                    return group;
+                }
+            }
+            return "その他";
+        }
+
+        // 初期化時や回答時に、該当問題の選択肢のスタイルを変更し、無効化する
+        function applyMarking(qIndex, aIndex) {
+            const q = quizData.questions[qIndex];
+            const qCard = document.getElementById(`question-${qIndex}`);
+            const isAnswered = qIndex in currentAnswers;
+            
+            qCard.querySelectorAll('input[type="radio"]').forEach((radio, optIndex) => {
+                const label = radio.parentElement;
+                const option = q.answerOptions[optIndex];
+
+                if (isAnswered) {
+                    // 回答済みのスタイルを適用
+                    radio.disabled = true;
+                    label.classList.add('answered');
+
+                    // 正解/不正解の色分け
+                    if (option.isCorrect) {
+                        label.classList.add('correct');
+                    } else if (aIndex === optIndex) {
+                        label.classList.add('incorrect');
+                    }
+                } else {
+                    // 未回答の状態を維持
+                    radio.disabled = false;
+                    label.classList.remove('answered', 'correct', 'incorrect');
+                }
+            });
+        }
+
+        // 初期化時にLocalStorageから回答を読み込み、マーキングを適用する
+        function initializeAnswers() {
+            // NOTE: forceClearLocalStorage() により、新規セッションでは currentAnswers は空です。
+
+            quizData.questions.forEach((q, index) => {
+                const storedAnswer = localStorage.getItem(`q${index}`);
+                if (storedAnswer !== null) {
+                    const ansIndex = parseInt(storedAnswer);
+                    currentAnswers[index] = ansIndex;
+                    
+                    // 選択肢のチェック状態を復元
+                    const radio = document.querySelector(`input[name="question-${index}"][value="${ansIndex}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                    
+                    // スタイル（無効化と色分け）の適用
+                    applyMarking(index, ansIndex);
+                    
+                    // 解説の復元表示
+                    showInstantFeedback(index, ansIndex, true); 
+                }
+            });
+            // 全問回答済みチェック
+            if (Object.keys(currentAnswers).length === quizData.questions.length) {
+                isQuizCompleted = true;
+            }
+        }
+        
+        // 即時フィードバック（クリック時に実行）
+        function showInstantFeedback(qIndex, aIndex, isInitialization = false) {
+            const q = quizData.questions[qIndex];
+            const rationaleContainer = document.getElementById(`rationale-${qIndex}`);
+            let isCorrect = q.answerOptions[aIndex].isCorrect;
+
+            // 回答時にマーキングと無効化を適用
+            if (!isInitialization) {
+                applyMarking(qIndex, aIndex);
+            }
+
+            // 解説の表示
+            const correctOption = q.answerOptions.find(opt => opt.isCorrect);
+            rationaleContainer.style.display = 'block';
+            rationaleContainer.innerHTML = `
+                <div class="rationale ${isCorrect ? 'correct' : 'incorrect'}">
+                    <strong>${isCorrect ? '【正解】' : '【不正解】'}</strong><br>
+                    <strong>解説:</strong> ${correctOption.rationale}
+                </div>
+            `;
+            
+            // 全問回答済みチェック
+            if (Object.keys(currentAnswers).length === quizData.questions.length && !isQuizCompleted) {
+                 isQuizCompleted = true;
+                 updateSubmitButton();
+            }
+        }
+
+        function renderQuiz() {
+            const quizContent = document.getElementById('quiz-content');
+            quizContent.innerHTML = '';
+            quizData.questions.forEach((q, index) => {
+                const qCard = document.createElement('div');
+                qCard.className = 'question-card';
+                qCard.id = `question-${index}`;
+
+                const qText = document.createElement('div');
+                qText.className = 'question-text';
+                qText.innerHTML = `問${index + 1}. [${getCategoryGroup(q.category)}] ${q.question}`;
+                qCard.appendChild(qText);
+                
+                const hintText = document.createElement('div');
+                hintText.className = 'hint-text';
+                hintText.textContent = `ヒント: ${q.hint}`;
+                qCard.appendChild(hintText);
+
+                q.answerOptions.forEach((option, optIndex) => {
+                    const label = document.createElement('label');
+                    label.className = 'answer-option';
+                    
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = `question-${index}`;
+                    radio.value = optIndex;
+                    
+                    // クリック時の処理
+                    radio.onchange = (event) => {
+                        // 回答済みマークとフィードバックはhandleAnswer/showInstantFeedback内で処理
+                        if (index in currentAnswers) {
+                            return;
+                        }
+                        handleAnswer(index, optIndex);
+                        showInstantFeedback(index, optIndex); // 即時フィードバック実行
+                    };
+
+                    label.appendChild(radio);
+                    label.appendChild(document.createTextNode(option.text));
+                    qCard.appendChild(label);
+                });
+
+                const rationaleContainer = document.createElement('div');
+                rationaleContainer.id = `rationale-${index}`;
+                rationaleContainer.className = 'rationale-container';
+                rationaleContainer.style.display = 'none';
+                qCard.appendChild(rationaleContainer);
+
+                quizContent.appendChild(qCard);
+            });
+            
+            initializeAnswers(); // 回答の読み込みとマークの適用
+            updateSubmitButton();
+        }
+
+        function handleAnswer(qIndex, aIndex) {
+            // 回答とLocalStorage保存
+            currentAnswers[qIndex] = aIndex;
+            localStorage.setItem(`q${qIndex}`, aIndex);
+            updateSubmitButton();
+        }
+
+
+        function updateSubmitButton() {
+            const totalQuestions = quizData.questions.length;
+            const answeredCount = Object.keys(currentAnswers).length;
+            const submitButton = document.getElementById('show-results-btn');
+            
+            submitButton.textContent = `結果を表示 (${answeredCount}/${totalQuestions} 問解答)`;
+
+            if (answeredCount === totalQuestions) {
+                submitButton.disabled = false;
+            } else {
+                submitButton.disabled = true;
+            }
+        }
+
+
+        function calculateResults() {
+            const totalQuestions = quizData.questions.length;
+            let score = 0;
+            const results = [];
+            const categoryScores = {}; 
+
+            // 初期化
+            for (const group in CATEGORY_GROUPS) {
+                categoryScores[group] = { correct: 0, total: 0 };
+            }
+
+            quizData.questions.forEach((q, index) => {
+                const selectedOptionIndex = currentAnswers[index];
+                const groupName = getCategoryGroup(q.category);
+                let isCorrect = false;
+
+                // 採点
+                q.answerOptions.forEach((option, optIndex) => {
+                    if (option.isCorrect && selectedOptionIndex === optIndex) {
+                        score++;
+                        isCorrect = true;
+                    }
+                });
+
+                // カテゴリ別集計
+                if (groupName && groupName !== "その他") {
+                    categoryScores[groupName].total++;
+                    if (isCorrect) {
+                        categoryScores[groupName].correct++;
+                    }
+                }
+
+                results.push({
+                    question: q.question,
+                    isCorrect: isCorrect,
+                    userAnswerIndex: selectedOptionIndex,
+                    correctAnswerIndex: q.answerOptions.findIndex(opt => opt.isCorrect)
+                });
+            });
+
+            return { score, totalQuestions, results, categoryScores };
+        }
+        
+        // レーダーチャート（テキスト）生成関数
+        function generateRadarChart(scores) {
+            let chart = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            let radarText = "";
+            const maxNameLength = 16;
+            const chartScale = 30; // 30文字スケール
+
+            for (const group in scores) {
+                const data = scores[group];
+                if (data.total === 0) continue;
+
+                const rate = data.correct / data.total;
+                const barLength = Math.round(rate * chartScale);
+                const bar = "■".repeat(barLength) + " ".repeat(chartScale - barLength);
+                const percentage = (rate * 100).toFixed(0);
+                
+                let colorClass = 'low';
+                if (rate >= 0.8) {
+                    colorClass = 'high';
+                } else if (rate >= 0.5) {
+                    colorClass = 'mid';
+                }
+
+                const paddedName = group.padEnd(maxNameLength, '　');
+                radarText += `<span class="${colorClass}">${paddedName}: [${bar}] ${percentage}%</span>\n`;
+            }
+            chart += radarText;
+            chart += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            chart += "■: 正答率バー (50%未満:赤, 50-79%:黄, 80%以上:緑)\n";
+            return chart;
+        }
+
+
+        function showResults() {
+            const { score, totalQuestions, results, categoryScores } = calculateResults();
+            const resultsDiv = document.getElementById('results');
+            
+            const percentage = (score / totalQuestions * 100).toFixed(1);
+            const radarChart = generateRadarChart(categoryScores);
+            
+            resultsDiv.style.display = 'block';
+            
+            // --- 集計と分析のパート ---
+            let analysisHTML = `
+                <h2>分野別 正答率分析（8分野）</h2>
+                <p>あなたの理解度を分野ごとに評価しました。特に赤色の分野は再学習を推奨します。</p>
+                <div class="analysis-detail">
+                    <pre class="radar-chart">${radarChart}</pre>
+                </div>
+                
+                <p style="margin-top: 20px;"><strong>不正解問題リスト（復習推奨）:</strong></p>
+                <ul style="text-align: left; margin-left: 20px;">
+                ${results.map((res, index) => 
+                    !res.isCorrect ? `<li style="color: #dc3545;">問${index + 1}. [${getCategoryGroup(quizData.questions[index].category)}] ${quizData.questions[index].question}</li>` : ''
+                ).join('')}
+                </ul>
+            `;
+            
+            // --- 最終結果表示 ---
+            resultsDiv.innerHTML = `
+                <h2>クイズ結果概要</h2>
+                <div class="score-info">
+                    ${totalQuestions}問中 ${score}問正解！
+                </div>
+                <p>正答率: ${percentage}%</p>
+                <button id="save-results-btn" class="save-btn">結果をテキストで保存</button>
+                <button class="submit-btn" onclick="clearLocalStorageAndResetForm()">もう一度挑戦する</button>
+                ${analysisHTML}
+                <p style="margin-top: 20px;">各問題の正解と解説は選択直後に表示されています。</p>
+            `;
+
+            document.getElementById('save-results-btn').addEventListener('click', () => saveResults(score, totalQuestions, percentage, results, categoryScores));
+            document.getElementById('show-results-btn').style.display = 'none';
+        }
+
+        // ローカルストレージクリアとフォームリセットを行う関数
+        function clearLocalStorageAndResetForm() {
+            if (confirm("これまでの回答データを消去し、新しくクイズを開始しますか？")) {
+                // 1. LocalStorageをクリア
+                quizData.questions.forEach((q, index) => {
+                    localStorage.removeItem(`q${index}`);
+                });
+                
+                // 2. フォームをリセット (ブラウザキャッシュをクリアする最も確実な方法)
+                document.getElementById('quiz-form').reset();
+                
+                // 3. ページをリロードして初期状態に戻す
+                location.reload();
+            }
+        }
+
+        function saveResults(score, totalQuestions, percentage, results, categoryScores) {
+            const timestamp = new Date().toLocaleString('ja-JP');
+            let content = `--- 東京国際空港 制限区域内安全クイズ 結果 ---\n`;
+            content += `受験日時: ${timestamp}\n`;
+            content += `総問題数: ${totalQuestions}問\n`;
+            content += `正解数: ${score}問\n`;
+            content += `正答率: ${percentage}%\n\n`;
+            
+            content += `--- 分野別正答率 ---\n`;
+            for (const group in categoryScores) {
+                const data = categoryScores[group];
+                if (data.total > 0) {
+                    const rate = (data.correct / data.total * 100).toFixed(0);
+                    content += `${group}: ${rate}% (${data.correct}/${data.total}問)\n`;
+                }
+            }
+            content += `\n--- 不正解問題リスト ---\n`;
+
+            results.forEach((res, index) => {
+                if (!res.isCorrect) {
+                    const q = quizData.questions[index];
+                    const rationale = q.answerOptions.find(opt => opt.isCorrect).rationale;
+                    content += `[問${index + 1} - ${getCategoryGroup(q.category)}]\n`;
+                    content += `問題: ${q.question}\n`;
+                    content += `解説: ${rationale}\n`;
+                    content += `------------------------\n`;
+                }
+            });
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const filename = `Quiz_Result_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.txt`;
+            
+            // ファイルダウンロードを実行
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        document.getElementById('show-results-btn').addEventListener('click', showResults);
+        
+        // クイズの初期化
+        renderQuiz();
+    </script>
+</body>
+</html>
