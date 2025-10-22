@@ -618,7 +618,52 @@
                 ).join('')}
                 </ul>
             `;
-            
+
+function sendDataToGas(score, total, percentage, categoryScores) {
+    // ⚠️ ここをステップ2でコピーした「ウェブアプリのURL」に置き換えてください
+    const GAS_WEB_APP_URL = "【https://script.google.com/a/macros/mail.penta-ocean.co.jp/s/AKfycbyEC98yYOv7oL8tGdwpT5V-wSRyWvS0jF9AHkriQ7OGxgD7lwyUCRc_8hCM3sLK7SnIYg/exec】"; 
+
+    const dataToSend = {
+        score: `${score}/${total}`,
+        percentage: percentage + '%',
+        categoryScores: categoryScores // 分野別スコアのオブジェクト
+    };
+
+    console.log("送信データ:", dataToSend); // 開発者ツールで確認用
+
+    fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/plain;charset=utf-8', // GASの仕様に合わせる
+        },
+        body: JSON.stringify(dataToSend)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('GASからの応答:', data);
+        if (data.result === "success") {
+            // 送信成功メッセージなどを表示しても良い
+        } else {
+            alert("回答結果のサーバーへの記録に失敗しました。");
+        }
+    })
+    .catch((error) => {
+        console.error('データ送信エラー:', error);
+        alert("ネットワークエラーにより、集計サーバーへの記録に失敗しました。");
+    });
+}
+
+// 既存の showResults() 関数内を修正
+function showResults() {
+    // ... (中略：既存の calculateResults() の呼び出しや結果の計算ロジック) ...
+    const { score, totalQuestions, results, categoryScores } = calculateResults();
+    const percentage = (score / totalQuestions * 100).toFixed(1);
+    
+    // ⚠️ ここにデータ送信関数を呼び出すコードを追加
+    sendDataToGas(score, totalQuestions, percentage, categoryScores); 
+    
+    // ... (後略：既存のHTML表示ロジック) ...
+}
             // --- 最終結果表示 ---
             resultsDiv.innerHTML = `
                 <h2>クイズ結果概要</h2>
