@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>制限区域内安全クイズ（基本編）</title>
+    <title>東京国際空港 制限区域内安全クイズ（完全版）</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -139,7 +139,7 @@
             color: #555;
             padding: 8px;
             border-left: 3px solid #ffc107;
-            background-color: #fffbe6;
+            background-color: #fffbebe6;
         }
         .analysis-detail {
             text-align: left;
@@ -163,17 +163,11 @@
         .radar-chart .low { color: #dc3545; font-weight: bold; }
         .radar-chart .mid { color: #ffc107; font-weight: bold; }
             .radar-chart .high { color: #28a745; font-weight: bold; }
-
-        @media (max-width: 600px) {
-            body { padding: 5px; }
-            .quiz-container { padding: 10px; }
-            .radar-chart { font-size: 0.8em; }
-        }
     </style>
 </head>
 <body>
     <div class="quiz-container">
-        <h1>東京国際空港 制限区域内安全クイズ（基本編）</h1>
+        <h1>東京国際空港 制限区域内安全クイズ</h1>
         <form id="quiz-form">
             <div id="quiz-content">
                 </div>
@@ -187,7 +181,7 @@
     <script>
         // --- 起動時にLocalStorageの回答データを全てクリアする関数 ---
         function forceClearLocalStorage() {
-            // q0からq9まで、全ての回答データを削除
+            // クイズが10問なので、q0からq9までをクリア
             for (let i = 0; i < 10; i++) {
                 localStorage.removeItem(`q${i}`);
             }
@@ -344,7 +338,10 @@
         
         let currentAnswers = {};
         let isQuizCompleted = false;
-
+        
+        // ⚠️ 【重要】ここにコピーしたGASのURLを貼り付けます ⚠️
+        const GAS_WEB_APP_URL = "【ここにコピーしたGASのURLを貼り付けます】"; 
+        
         function getCategoryGroup(category) {
             for (const group in CATEGORY_GROUPS) {
                 if (CATEGORY_GROUPS[group].includes(category)) {
@@ -365,18 +362,15 @@
                 const option = q.answerOptions[optIndex];
 
                 if (isAnswered) {
-                    // 回答済みのスタイルを適用
                     radio.disabled = true;
                     label.classList.add('answered');
 
-                    // 正解/不正解の色分け
                     if (option.isCorrect) {
                         label.classList.add('correct');
                     } else if (aIndex === optIndex) {
                         label.classList.add('incorrect');
                     }
                 } else {
-                    // 未回答の状態を維持
                     radio.disabled = false;
                     label.classList.remove('answered', 'correct', 'incorrect');
                 }
@@ -385,28 +379,21 @@
 
         // 初期化時にLocalStorageから回答を読み込み、マーキングを適用する
         function initializeAnswers() {
-            // NOTE: forceClearLocalStorage() により、新規セッションでは currentAnswers は空です。
-
             quizData.questions.forEach((q, index) => {
                 const storedAnswer = localStorage.getItem(`q${index}`);
                 if (storedAnswer !== null) {
                     const ansIndex = parseInt(storedAnswer);
                     currentAnswers[index] = ansIndex;
                     
-                    // 選択肢のチェック状態を復元
                     const radio = document.querySelector(`input[name="question-${index}"][value="${ansIndex}"]`);
                     if (radio) {
                         radio.checked = true;
                     }
                     
-                    // スタイル（無効化と色分け）の適用
                     applyMarking(index, ansIndex);
-                    
-                    // 解説の復元表示
                     showInstantFeedback(index, ansIndex, true); 
                 }
             });
-            // 全問回答済みチェック
             if (Object.keys(currentAnswers).length === quizData.questions.length) {
                 isQuizCompleted = true;
             }
@@ -418,12 +405,10 @@
             const rationaleContainer = document.getElementById(`rationale-${qIndex}`);
             let isCorrect = q.answerOptions[aIndex].isCorrect;
 
-            // 回答時にマーキングと無効化を適用
             if (!isInitialization) {
                 applyMarking(qIndex, aIndex);
             }
 
-            // 解説の表示
             const correctOption = q.answerOptions.find(opt => opt.isCorrect);
             rationaleContainer.style.display = 'block';
             rationaleContainer.innerHTML = `
@@ -433,7 +418,6 @@
                 </div>
             `;
             
-            // 全問回答済みチェック
             if (Object.keys(currentAnswers).length === quizData.questions.length && !isQuizCompleted) {
                  isQuizCompleted = true;
                  updateSubmitButton();
@@ -467,14 +451,12 @@
                     radio.name = `question-${index}`;
                     radio.value = optIndex;
                     
-                    // クリック時の処理
                     radio.onchange = (event) => {
-                        // 回答済みマークとフィードバックはhandleAnswer/showInstantFeedback内で処理
                         if (index in currentAnswers) {
                             return;
                         }
                         handleAnswer(index, optIndex);
-                        showInstantFeedback(index, optIndex); // 即時フィードバック実行
+                        showInstantFeedback(index, optIndex);
                     };
 
                     label.appendChild(radio);
@@ -491,12 +473,11 @@
                 quizContent.appendChild(qCard);
             });
             
-            initializeAnswers(); // 回答の読み込みとマークの適用
+            initializeAnswers();
             updateSubmitButton();
         }
 
         function handleAnswer(qIndex, aIndex) {
-            // 回答とLocalStorage保存
             currentAnswers[qIndex] = aIndex;
             localStorage.setItem(`q${qIndex}`, aIndex);
             updateSubmitButton();
@@ -524,7 +505,6 @@
             const results = [];
             const categoryScores = {}; 
 
-            // 初期化
             for (const group in CATEGORY_GROUPS) {
                 categoryScores[group] = { correct: 0, total: 0 };
             }
@@ -534,7 +514,6 @@
                 const groupName = getCategoryGroup(q.category);
                 let isCorrect = false;
 
-                // 採点
                 q.answerOptions.forEach((option, optIndex) => {
                     if (option.isCorrect && selectedOptionIndex === optIndex) {
                         score++;
@@ -542,7 +521,6 @@
                     }
                 });
 
-                // カテゴリ別集計
                 if (groupName && groupName !== "その他") {
                     categoryScores[groupName].total++;
                     if (isCorrect) {
@@ -561,12 +539,56 @@
             return { score, totalQuestions, results, categoryScores };
         }
         
-        // レーダーチャート（テキスト）生成関数
+        // --- GASへのデータ送信関数 ---
+        function sendDataToGas(score, total, percentage, categoryScores) {
+            // ユーザー識別IDは暫定的に「未設定ユーザー」とする
+            const userId = "未設定ユーザー (要フォーム追加)"; 
+
+            const dataToSend = {
+                userId: userId,
+                score: `${score}/${total}`,
+                percentage: percentage + '%',
+                categoryScores: categoryScores 
+            };
+
+            // GAS_WEB_APP_URL が未設定の場合は、送信処理をスキップ
+            if (GAS_WEB_APP_URL.includes("【https://script.google.com/a/macros/mail.penta-ocean.co.jp/s/AKfycbyEC98yYOv7oL8tGdwpT5V-wSRyWvS0jF9AHkriQ7OGxgD7lwyUCRc_8hCM3sLK7SnIYg/exec】")) {
+                console.warn("GAS URLが未設定のため、データ送信をスキップしました。");
+                return;
+            }
+
+            fetch(GAS_WEB_APP_URL, {
+                method: 'POST',
+                // Content-Typeヘッダーを意図的に削除し、CORSエラーを回避しやすくする
+                body: JSON.stringify(dataToSend)
+            })
+            .then(response => {
+                // GASからの応答をJSONとして受け取る
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.result === "success") {
+                    console.log('✅ GASへのデータ送信が成功しました。', data);
+                } else {
+                    console.error('❌ GASからエラー応答が返されました:', data);
+                    alert("回答結果の集計サーバーへの記録に失敗しましたが、結果表示は完了しました。");
+                }
+            })
+            .catch((error) => {
+                console.error('❌ データ送信時にネットワークエラーが発生しました:', error);
+                alert("結果集計サーバーへの接続エラーです。GASのデプロイ設定をご確認ください。");
+            });
+        }
+        // --- データ送信関数 ここまで ---
+
         function generateRadarChart(scores) {
             let chart = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
             let radarText = "";
             const maxNameLength = 16;
-            const chartScale = 30; // 30文字スケール
+            const chartScale = 30;
 
             for (const group in scores) {
                 const data = scores[group];
@@ -602,8 +624,11 @@
             const radarChart = generateRadarChart(categoryScores);
             
             resultsDiv.style.display = 'block';
+
+            // --- GASへのデータ送信を実行 ---
+            sendDataToGas(score, totalQuestions, percentage, categoryScores);
             
-            // --- 集計と分析のパート ---
+            // ... (HTML表示ロジックは省略) ...
             let analysisHTML = `
                 <h2>分野別 正答率分析（8分野）</h2>
                 <p>あなたの理解度を分野ごとに評価しました。特に赤色の分野は再学習を推奨します。</p>
@@ -618,53 +643,7 @@
                 ).join('')}
                 </ul>
             `;
-
-function sendDataToGas(score, total, percentage, categoryScores) {
-    // ⚠️ ここをステップ2でコピーした「ウェブアプリのURL」に置き換えてください
-    const GAS_WEB_APP_URL = "【https://script.google.com/macros/s/AKfycbzxS5kyLjnO5YnO7bdK0kx32fCOc7f5kGAvb-qknTudIiZunhitrpZsh4Stf8U62RetIA/exec】"; 
-
-    const dataToSend = {
-        score: `${score}/${total}`,
-        percentage: percentage + '%',
-        categoryScores: categoryScores // 分野別スコアのオブジェクト
-    };
-
-    console.log("送信データ:", dataToSend); // 開発者ツールで確認用
-
-    fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'text/plain;charset=utf-8', // GASの仕様に合わせる
-        },
-        body: JSON.stringify(dataToSend)
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('GASからの応答:', data);
-        if (data.result === "success") {
-            // 送信成功メッセージなどを表示しても良い
-        } else {
-            alert("回答結果のサーバーへの記録に失敗しました。");
-        }
-    })
-    .catch((error) => {
-        console.error('データ送信エラー:', error);
-        alert("ネットワークエラーにより、集計サーバーへの記録に失敗しました。");
-    });
-}
-
-// 既存の showResults() 関数内を修正
-function showResults() {
-    // ... (中略：既存の calculateResults() の呼び出しや結果の計算ロジック) ...
-    const { score, totalQuestions, results, categoryScores } = calculateResults();
-    const percentage = (score / totalQuestions * 100).toFixed(1);
-    
-    // ⚠️ ここにデータ送信関数を呼び出すコードを追加
-    sendDataToGas(score, totalQuestions, percentage, categoryScores); 
-    
-    // ... (後略：既存のHTML表示ロジック) ...
-}
-            // --- 最終結果表示 ---
+            
             resultsDiv.innerHTML = `
                 <h2>クイズ結果概要</h2>
                 <div class="score-info">
@@ -681,18 +660,12 @@ function showResults() {
             document.getElementById('show-results-btn').style.display = 'none';
         }
 
-        // ローカルストレージクリアとフォームリセットを行う関数
         function clearLocalStorageAndResetForm() {
             if (confirm("これまでの回答データを消去し、新しくクイズを開始しますか？")) {
-                // 1. LocalStorageをクリア
                 quizData.questions.forEach((q, index) => {
                     localStorage.removeItem(`q${index}`);
                 });
-                
-                // 2. フォームをリセット (ブラウザキャッシュをクリアする最も確実な方法)
                 document.getElementById('quiz-form').reset();
-                
-                // 3. ページをリロードして初期状態に戻す
                 location.reload();
             }
         }
@@ -729,7 +702,6 @@ function showResults() {
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             const filename = `Quiz_Result_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.txt`;
             
-            // ファイルダウンロードを実行
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = filename;
@@ -740,7 +712,6 @@ function showResults() {
 
         document.getElementById('show-results-btn').addEventListener('click', showResults);
         
-        // クイズの初期化
         renderQuiz();
     </script>
 </body>
