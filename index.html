@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>制限区域内安全クイズ（設問表示復旧版）</title>
+    <title>制限区域内安全クイズ（全8分野対応最終版）</title>
     <style>
         /* スタイルシートは省略 */
         body {
@@ -548,16 +548,15 @@
             const FORM_KEY = "1FAIpQLSeZ9tl8zyQQJyUujbDve0uqIcqvDBlJpryP2FyUmvPz-C7r5Q";
             const FORM_POST_URL = `https://docs.google.com/forms/d/e/${FORM_KEY}/formResponse`;
 
-            // ✅ 取得した正確なフィールドIDを組み込みます
+            // ⚠️ 【重要】新しいIDを取得して、これらのダミーIDを置き換えてください！
             const ID_USER = 'entry.2125414563'; 
             const ID_SCORE = 'entry.1918104257'; 
             const ID_PERCENTAGE = 'entry.1237722946'; 
             const ID_Q_ANSWERS = 'entry.840212971'; // Q Answers (設問ごと正誤文字列)
             
-            // 14個のカテゴリ Correct/Total フィールド
-            // ⚠️ 提供されたIDを正確にマッピングします ⚠️
+            // 16個のカテゴリ Correct/Total フィールド (ID・識別・資格を復活)
             const CAT_FIELDS = {
-                "ID・識別・資格": { C: 'entry.365319803', T: 'entry.365319803' }, // フォームにないため、ダミーIDを使用 (送信時にスキップ)
+                "ID・識別・資格": { C: 'entry.457334866', T: 'entry.1398999268' }, // ⬅️ 取得した新しいIDをここに貼り付け
                 "航空機優先・接近": { C: 'entry.1691456569', T: 'entry.1535902522' },
                 "車両運行・一般ルール": { C: 'entry.856557345', T: 'entry.1422899614' },
                 "サービスレーン・特定区域": { C: 'entry.163494329', T: 'entry.1719490919' },
@@ -580,10 +579,10 @@
             payload.append(ID_PERCENTAGE, percentage + '%');
             payload.append(ID_Q_ANSWERS, qAnswersString); // Q Answersを追加！
 
-            // 14個の個別フィールドを追加
+            // 16個の個別フィールドを追加 (Totalが0のカテゴリも送信)
             for (const categoryName in categoryScores) {
-                // ID・識別・資格 と その他 は送信をスキップ
-                if (categoryName === "ID・識別・資格" || categoryName === "その他") {
+                // その他のカテゴリはスキップ
+                if (categoryName === "その他") {
                     continue;
                 }
 
@@ -616,7 +615,6 @@
 
             for (const group in scores) {
                 const data = scores[group];
-                // グラフにはTotalが0のカテゴリも表示するが、計算はTotal > 0 で行う
                 if (group === "その他") continue;
 
                 const rate = data.total > 0 ? data.correct / data.total : 0;
