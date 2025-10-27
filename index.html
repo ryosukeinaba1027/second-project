@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>制限区域内安全クイズ（全8分野対応最終版）</title>
+    <title>制限区域内安全クイズ（最終決定版）</title>
     <style>
         /* スタイルシートは省略 */
         body {
@@ -219,7 +219,7 @@
             {
               "questionNumber": 3,
               "question": "制限区域内で作業員が常に携帯し、身につけていなければならないものは何ですか。",
-              "category": "ID・識別・資格",
+              "category": "ID・識別・資格", // 問題3はここに該当
               "imageUrl": null,
               "answerOptions": [
                 { "text": "車両用の識別旗", "rationale": "車両識別旗は車両に装着するもので、作業員が身につけるものではありません。", "isCorrect": false },
@@ -548,15 +548,17 @@
             const FORM_KEY = "1FAIpQLSeZ9tl8zyQQJyUujbDve0uqIcqvDBlJpryP2FyUmvPz-C7r5Q";
             const FORM_POST_URL = `https://docs.google.com/forms/d/e/${FORM_KEY}/formResponse`;
 
-            // ⚠️ 【重要】新しいIDを取得して、これらのダミーIDを置き換えてください！
+            // ✅ 取得した正確なフィールドIDを組み込みます
+            // ----------------------------------------------------
             const ID_USER = 'entry.2125414563'; 
             const ID_SCORE = 'entry.1918104257'; 
             const ID_PERCENTAGE = 'entry.1237722946'; 
             const ID_Q_ANSWERS = 'entry.840212971'; // Q Answers (設問ごと正誤文字列)
             
-            // 16個のカテゴリ Correct/Total フィールド (ID・識別・資格を復活)
+            // 16個のカテゴリ Correct/Total フィールド (ご提供いただいたリストを使用)
             const CAT_FIELDS = {
-                "ID・識別・資格": { C: 'entry.457334866', T: 'entry.1398999268' }, // ⬅️ 取得した新しいIDをここに貼り付け
+                // ⚠️ 新しいIDに置き換え済みと仮定
+                "ID・識別・資格": { C: 'entry.457334866', T: 'entry.1398999268' }, 
                 "航空機優先・接近": { C: 'entry.1691456569', T: 'entry.1535902522' },
                 "車両運行・一般ルール": { C: 'entry.856557345', T: 'entry.1422899614' },
                 "サービスレーン・特定区域": { C: 'entry.163494329', T: 'entry.1719490919' },
@@ -565,6 +567,7 @@
                 "緊急時・通報": { C: 'entry.319845232', T: 'entry.245318157' },
                 "管制・無線・一般禁止": { C: 'entry.424611051', T: 'entry.1286403520' },
             };
+            // ----------------------------------------------------
             
             // ユーザーID入力 (時刻で仮対応)
             const USER_IDENTIFIER = "ユーザー_" + new Date().toLocaleTimeString('ja-JP'); 
@@ -590,10 +593,8 @@
                     const data = categoryScores[categoryName];
                     const fieldIds = CAT_FIELDS[categoryName];
                     
-                    // Correct数 (C) を追加 (0を明示的に送信)
+                    // Total数が0の場合も、明示的に0を送信することでスプレッドシートの列のズレを防ぐ
                     payload.append(fieldIds.C, data.correct || 0);
-                    
-                    // Total数 (T) を追加 (0を明示的に送信)
                     payload.append(fieldIds.T, data.total || 0);
                 }
             }
@@ -606,7 +607,7 @@
         }
 
         // ... (後略：その他の関数定義) ...
-
+        
         function generateRadarChart(scores) {
             let chart = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
             let radarText = "";
