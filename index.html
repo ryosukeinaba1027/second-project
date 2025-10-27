@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>制限区域内安全クイズ（フォーム送信最終版）</title>
+    <title>制限区域内安全クイズ（フォーム最短URL版）</title>
     <style>
         /* スタイルシートは省略 */
         body {
@@ -302,7 +302,7 @@
               "answerOptions": [
                 { "text": "はい、埋設灯火上なので走行しても問題ありません。", "rationale": "埋設灯火は走行可能ですが、マニュアルでは「極力走行しないこと」が求められています。", "isCorrect": false },
                 { "text": "いいえ、埋設灯火であっても、接触・破損の危険があるため走行は厳禁です。", "rationale": "埋設灯火は走行可能ですが、「極力走行しないこと」が正しい指示です。", "isCorrect": false },
-                { "text": "走行は可能ですが、安全確保のため**極力走行しない**ことが望ましいです。", "rationaire": "埋設航空灯火上は走行可能ですが、安全運用のため、極力走行を避けるよう指示されています。", "isCorrect": true },
+                { "text": "走行は可能ですが、安全確保のため**極力走行しない**ことが望ましいです。", "rationale": "埋設航空灯火上は走行可能ですが、安全運用のため、極力走行を避けるよう指示されています。", "isCorrect": true },
                 { "text": "灯火が埋設されているため、走行は完全に禁止されています。", "rationale": "灯火が埋設されているため走行は可能ですが、極力避けるべきとされています。", "isCorrect": false }
               ],
               "hint": "走行は可能ですが、マニュアルでは「推奨」されているか「避けるべき」とされているかを思い出しましょう。"
@@ -542,10 +542,13 @@
         // --- データ送信関数（Googleフォーム標準投稿） ---
         function sendDataToForm(score, total, percentage, results, categoryScores) {
             
-            // ⚠️ 【重要】このFORM_POST_URLを、ステップ1で取得した「/formResponse」URLに置き換えてください！
-            const FORM_POST_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeZ9tl8zyQQJyUujbDve0uqIcqvDBlJpryP2FyUmvPz-C7r5Q/formResponse";
+            // 🚨 【重要】フォームのキーID部分 (1FAIpQLSeZ9tl8zyQQJyUujbDve0uqIcqvDBlJpryP2FyUmvPz-C7r5Q)のみを抽出します。
+            const FORM_KEY = "1FAIpQLSeZ9tl8zyQQJyUujbDve0uqIcqvDBlJpryP2FyUmvPz-C7r5Q";
 
-            // ✅ 取得した正確なフィールドIDを貼り付けます
+            // 短縮形式の投稿URLを構築します。
+            const FORM_POST_URL = `https://docs.google.com/forms/d/e/${FORM_KEY}/formResponse`;
+            
+            // ✅ 正しいフィールドIDを組み込みます
             const ID_USER = 'entry.2125414563'; 
             const ID_SCORE = 'entry.1918104257'; 
             const ID_PERCENTAGE = 'entry.1237722946'; 
