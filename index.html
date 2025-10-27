@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>制限区域内安全クイズ（フォーム最短URL版）</title>
+    <title>制限区域内安全クイズ（最終完全版）</title>
     <style>
-        /* スタイルシートは省略 */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7f6;
@@ -186,6 +185,7 @@
                 localStorage.removeItem(`q${i}`);
             }
         }
+        // クイズコード実行前に強制クリア
         forceClearLocalStorage();
 
         const quizData = {
@@ -542,23 +542,29 @@
         // --- データ送信関数（Googleフォーム標準投稿） ---
         function sendDataToForm(score, total, percentage, results, categoryScores) {
             
-            // 🚨 【重要】フォームのキーID部分 (1FAIpQLSeZ9tl8zyQQJyUujbDve0uqIcqvDBlJpryP2FyUmvPz-C7r5Q)のみを抽出します。
+            // ✅ フォームのキー部分を定数に設定
             const FORM_KEY = "1FAIpQLSeZ9tl8zyQQJyUujbDve0uqIcqvDBlJpryP2FyUmvPz-C7r5Q";
-
-            // 短縮形式の投稿URLを構築します。
             const FORM_POST_URL = `https://docs.google.com/forms/d/e/${FORM_KEY}/formResponse`;
-            
-            // ✅ 正しいフィールドIDを組み込みます
+
+            // ✅ 取得した正確なフィールドIDを組み込みます
             const ID_USER = 'entry.2125414563'; 
             const ID_SCORE = 'entry.1918104257'; 
             const ID_PERCENTAGE = 'entry.1237722946'; 
             const ID_Q_ANSWERS = 'entry.1691456569'; 
-            const ID_CATEGORIES = 'entry.1552102940'; 
+            
+            // 14個の個別カテゴリ ID
+            const CAT_FIELDS = {
+                "航空機優先・接近": { C: 'entry.856557345', T: 'entry.1535902522' },
+                "車両運行・一般ルール": { C: 'entry.163494329', T: 'entry.1422899614' },
+                "サービスレーン・特定区域": { C: 'entry.677894160', T: 'entry.1719490919' },
+                "航空灯火・施設保護": { C: 'entry.1936399268', T: 'entry.1534159982' },
+                "FOD・環境・施設保護": { C: 'entry.319845232', T: 'entry.651892569' },
+                "緊急時・通報": { C: 'entry.424611051', T: 'entry.245318157' },
+                "管制・無線・一般禁止": { C: 'entry.1552102940', T: 'entry.1286403520' },
+            };
             
             // ユーザーID入力 (今回は時刻で仮対応)
             const USER_IDENTIFIER = "ユーザー_" + new Date().toLocaleTimeString('ja-JP'); 
-
-            // Q1-Q10の正誤を「1」か「0」のカンマ区切り文字列で作成
             const qAnswersString = results.map(res => res.isCorrect ? "1" : "0").join(','); 
 
             // データペイロードの構築
@@ -567,7 +573,21 @@
             payload.append(ID_SCORE, `${score}/${total}`);
             payload.append(ID_PERCENTAGE, percentage + '%');
             payload.append(ID_Q_ANSWERS, qAnswersString);
-            payload.append(ID_CATEGORIES, JSON.stringify(categoryScores));
+
+            // 14個の個別フィールドを追加 (ID・識別・資格はスキップ)
+            for (const categoryName in categoryScores) {
+                // Totalが0より大きいカテゴリ、かつCAT_FIELDSに定義されているカテゴリのみを送信
+                if (categoryScores[categoryName].total > 0 && CAT_FIELDS[categoryName]) {
+                    const data = categoryScores[categoryName];
+                    const fieldIds = CAT_FIELDS[categoryName];
+                    
+                    // Correct数 (C) を追加
+                    payload.append(fieldIds.C, data.correct);
+                    
+                    // Total数 (T) を追加
+                    payload.append(fieldIds.T, data.total);
+                }
+            }
 
             // 最終投稿URLを構築
             const finalPostUrl = `${FORM_POST_URL}?${payload.toString()}`;
