@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>制限区域内安全クイズ（最終修正版 - 0埋め対応）</title>
+    <title>制限区域内安全クイズ（設問表示復旧版）</title>
     <style>
         /* スタイルシートは省略 */
         body {
@@ -505,9 +505,8 @@
             const results = [];
             const categoryScores = {}; 
 
-            // 7分野すべてを初期化（ID・識別・資格も含む）
+            // 8分野すべてを初期化（問題数が0でもキーが存在するように）
             for (const group in CATEGORY_GROUPS) {
-                 // 修正: まず全てのグループを {correct: 0, total: 0} で初期化
                 categoryScores[group] = { correct: 0, total: 0 };
             }
 
@@ -556,9 +555,9 @@
             const ID_Q_ANSWERS = 'entry.840212971'; // Q Answers (設問ごと正誤文字列)
             
             // 14個のカテゴリ Correct/Total フィールド
-            // ⚠️ ここに提供されたIDを正確にマッピングします ⚠️
+            // ⚠️ 提供されたIDを正確にマッピングします ⚠️
             const CAT_FIELDS = {
-                "ID・識別・資格": { C: 'entry.840212971', T: 'entry.840212971' }, // ⚠️ Q AnswersとIDが重なっているため、ここではID・識別・資格は送信しない
+                "ID・識別・資格": { C: 'entry.365319803', T: 'entry.365319803' }, // フォームにないため、ダミーIDを使用 (送信時にスキップ)
                 "航空機優先・接近": { C: 'entry.1691456569', T: 'entry.1535902522' },
                 "車両運行・一般ルール": { C: 'entry.856557345', T: 'entry.1422899614' },
                 "サービスレーン・特定区域": { C: 'entry.163494329', T: 'entry.1719490919' },
@@ -568,7 +567,7 @@
                 "管制・無線・一般禁止": { C: 'entry.424611051', T: 'entry.1286403520' },
             };
             
-            // ユーザーID入力 (今回は時刻で仮対応)
+            // ユーザーID入力 (時刻で仮対応)
             const USER_IDENTIFIER = "ユーザー_" + new Date().toLocaleTimeString('ja-JP'); 
             
             // Q1-Q10の正誤を「1」か「0」のカンマ区切り文字列で作成
@@ -579,13 +578,12 @@
             payload.append(ID_USER, USER_IDENTIFIER);
             payload.append(ID_SCORE, `${score}/${total}`);
             payload.append(ID_PERCENTAGE, percentage + '%');
-            // Q Answersを送信 (IDは確定済み)
-            payload.append(ID_Q_ANSWERS, qAnswersString); 
+            payload.append(ID_Q_ANSWERS, qAnswersString); // Q Answersを追加！
 
-            // 14個の個別フィールドを追加 (ID・識別・資格はスキップ)
+            // 14個の個別フィールドを追加
             for (const categoryName in categoryScores) {
-                // 設問数が0のID・識別・資格と、その他をスキップ
-                if (categoryScores[categoryName].total === 0 || categoryName === "ID・識別・資格" || categoryName === "その他") {
+                // ID・識別・資格 と その他 は送信をスキップ
+                if (categoryName === "ID・識別・資格" || categoryName === "その他") {
                     continue;
                 }
 
@@ -593,10 +591,10 @@
                     const data = categoryScores[categoryName];
                     const fieldIds = CAT_FIELDS[categoryName];
                     
-                    // Correct数 (C) を追加 (データがない場合も 0 を送信)
+                    // Correct数 (C) を追加 (0を明示的に送信)
                     payload.append(fieldIds.C, data.correct || 0);
                     
-                    // Total数 (T) を追加 (データがない場合も 0 を送信)
+                    // Total数 (T) を追加 (0を明示的に送信)
                     payload.append(fieldIds.T, data.total || 0);
                 }
             }
@@ -607,7 +605,8 @@
             // ユーザーをリダイレクトし、データ送信を実行
             window.location.href = finalPostUrl; 
         }
-        // --- データ送信関数 ここまで ---
+
+        // ... (後略：その他の関数定義) ...
 
         function generateRadarChart(scores) {
             let chart = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
@@ -617,10 +616,10 @@
 
             for (const group in scores) {
                 const data = scores[group];
-                // 修正: ID・識別・資格（問題数0）の項目はグラフ表示から除外
-                if (data.total === 0 && group !== "ID・識別・資格") continue;
+                // グラフにはTotalが0のカテゴリも表示するが、計算はTotal > 0 で行う
+                if (group === "その他") continue;
 
-                const rate = data.total > 0 ? data.correct / data.total : 0; // Total 0で割るのを回避
+                const rate = data.total > 0 ? data.correct / data.total : 0;
                 const barLength = Math.round(rate * chartScale);
                 const bar = "■".repeat(barLength) + " ".repeat(chartScale - barLength);
                 const percentage = (rate * 100).toFixed(0);
@@ -646,7 +645,6 @@
             const { score, totalQuestions, results, categoryScores } = calculateResults();
             const percentage = (score / totalQuestions * 100).toFixed(1);
             
-            // フォーム送信を実行
             sendDataToForm(score, totalQuestions, percentage, results, categoryScores); 
             
             const resultsDiv = document.getElementById('results');
