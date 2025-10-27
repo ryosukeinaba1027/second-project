@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>東京国際空港 制限区域内安全クイズ（完全版）</title>
+    <title>制限区域内安全クイズ（フォーム送信最終版）</title>
     <style>
+        /* スタイルシートは省略 */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7f6;
@@ -181,12 +182,10 @@
     <script>
         // --- 起動時にLocalStorageの回答データを全てクリアする関数 ---
         function forceClearLocalStorage() {
-            // クイズが10問なので、q0からq9までをクリア
             for (let i = 0; i < 10; i++) {
                 localStorage.removeItem(`q${i}`);
             }
         }
-        // クイズコード実行前に強制クリア
         forceClearLocalStorage();
 
         const quizData = {
@@ -303,7 +302,7 @@
               "answerOptions": [
                 { "text": "はい、埋設灯火上なので走行しても問題ありません。", "rationale": "埋設灯火は走行可能ですが、マニュアルでは「極力走行しないこと」が求められています。", "isCorrect": false },
                 { "text": "いいえ、埋設灯火であっても、接触・破損の危険があるため走行は厳禁です。", "rationale": "埋設灯火は走行可能ですが、「極力走行しないこと」が正しい指示です。", "isCorrect": false },
-                { "text": "走行は可能ですが、安全確保のため**極力走行しない**ことが望ましいです。", "rationale": "埋設航空灯火上は走行可能ですが、安全運用のため、極力走行を避けるよう指示されています。", "isCorrect": true },
+                { "text": "走行は可能ですが、安全確保のため**極力走行しない**ことが望ましいです。", "rationaire": "埋設航空灯火上は走行可能ですが、安全運用のため、極力走行を避けるよう指示されています。", "isCorrect": true },
                 { "text": "灯火が埋設されているため、走行は完全に禁止されています。", "rationale": "灯火が埋設されているため走行は可能ですが、極力避けるべきとされています。", "isCorrect": false }
               ],
               "hint": "走行は可能ですが、マニュアルでは「推奨」されているか「避けるべき」とされているかを思い出しましょう。"
@@ -338,10 +337,7 @@
         
         let currentAnswers = {};
         let isQuizCompleted = false;
-        
-        // ⚠️ 【重要】ここにコピーしたGASのURLを貼り付けます ⚠️
-        const GAS_WEB_APP_URL = "【ここにコピーしたGASのURLを貼り付けます】"; 
-        
+
         function getCategoryGroup(category) {
             for (const group in CATEGORY_GROUPS) {
                 if (CATEGORY_GROUPS[group].includes(category)) {
@@ -351,7 +347,13 @@
             return "その他";
         }
 
-        // 初期化時や回答時に、該当問題の選択肢のスタイルを変更し、無効化する
+        function forceClearLocalStorage() {
+            for (let i = 0; i < 10; i++) {
+                localStorage.removeItem(`q${i}`);
+            }
+        }
+        forceClearLocalStorage();
+
         function applyMarking(qIndex, aIndex) {
             const q = quizData.questions[qIndex];
             const qCard = document.getElementById(`question-${qIndex}`);
@@ -377,7 +379,6 @@
             });
         }
 
-        // 初期化時にLocalStorageから回答を読み込み、マーキングを適用する
         function initializeAnswers() {
             quizData.questions.forEach((q, index) => {
                 const storedAnswer = localStorage.getItem(`q${index}`);
@@ -399,7 +400,6 @@
             }
         }
         
-        // 即時フィードバック（クリック時に実行）
         function showInstantFeedback(qIndex, aIndex, isInitialization = false) {
             const q = quizData.questions[qIndex];
             const rationaleContainer = document.getElementById(`rationale-${qIndex}`);
@@ -539,48 +539,38 @@
             return { score, totalQuestions, results, categoryScores };
         }
         
-        // --- GASへのデータ送信関数 ---
-        function sendDataToGas(score, total, percentage, categoryScores) {
-            // ユーザー識別IDは暫定的に「未設定ユーザー」とする
-            const userId = "未設定ユーザー (要フォーム追加)"; 
+        // --- データ送信関数（Googleフォーム標準投稿） ---
+        function sendDataToForm(score, total, percentage, results, categoryScores) {
+            
+            // ⚠️ 【重要】このFORM_POST_URLを、ステップ1で取得した「/formResponse」URLに置き換えてください！
+            const FORM_POST_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeZ9tl8zyQQJyUujbDve0uqIcqvDBlJpryP2FyUmvPz-C7r5Q/formResponse";
 
-            const dataToSend = {
-                userId: userId,
-                score: `${score}/${total}`,
-                percentage: percentage + '%',
-                categoryScores: categoryScores 
-            };
+            // ✅ 取得した正確なフィールドIDを貼り付けます
+            const ID_USER = 'entry.2125414563'; 
+            const ID_SCORE = 'entry.1918104257'; 
+            const ID_PERCENTAGE = 'entry.1237722946'; 
+            const ID_Q_ANSWERS = 'entry.1691456569'; 
+            const ID_CATEGORIES = 'entry.1552102940'; 
+            
+            // ユーザーID入力 (今回は時刻で仮対応)
+            const USER_IDENTIFIER = "ユーザー_" + new Date().toLocaleTimeString('ja-JP'); 
 
-            // GAS_WEB_APP_URL が未設定の場合は、送信処理をスキップ
-            if (GAS_WEB_APP_URL.includes("https://script.google.com/macros/s/AKfycbwr63cwknuNBbtfkC3dCOupwrmaEHUyNutZF_D0o9yeUI6g02-5gdL1T7Nej7CEs0rA/exec")) {
-                console.warn("GAS URLが未設定のため、データ送信をスキップしました。");
-                return;
-            }
+            // Q1-Q10の正誤を「1」か「0」のカンマ区切り文字列で作成
+            const qAnswersString = results.map(res => res.isCorrect ? "1" : "0").join(','); 
 
-            fetch(GAS_WEB_APP_URL, {
-                method: 'POST',
-                // Content-Typeヘッダーを意図的に削除し、CORSエラーを回避しやすくする
-                body: JSON.stringify(dataToSend)
-            })
-            .then(response => {
-                // GASからの応答をJSONとして受け取る
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.result === "success") {
-                    console.log('✅ GASへのデータ送信が成功しました。', data);
-                } else {
-                    console.error('❌ GASからエラー応答が返されました:', data);
-                    alert("回答結果の集計サーバーへの記録に失敗しましたが、結果表示は完了しました。");
-                }
-            })
-            .catch((error) => {
-                console.error('❌ データ送信時にネットワークエラーが発生しました:', error);
-                alert("結果集計サーバーへの接続エラーです。GASのデプロイ設定をご確認ください。");
-            });
+            // データペイロードの構築
+            const payload = new URLSearchParams();
+            payload.append(ID_USER, USER_IDENTIFIER);
+            payload.append(ID_SCORE, `${score}/${total}`);
+            payload.append(ID_PERCENTAGE, percentage + '%');
+            payload.append(ID_Q_ANSWERS, qAnswersString);
+            payload.append(ID_CATEGORIES, JSON.stringify(categoryScores));
+
+            // 最終投稿URLを構築
+            const finalPostUrl = `${FORM_POST_URL}?${payload.toString()}`;
+
+            // ユーザーをリダイレクトし、データ送信を実行
+            window.location.href = finalPostUrl; 
         }
         // --- データ送信関数 ここまで ---
 
@@ -618,20 +608,19 @@
 
         function showResults() {
             const { score, totalQuestions, results, categoryScores } = calculateResults();
-            const resultsDiv = document.getElementById('results');
-            
             const percentage = (score / totalQuestions * 100).toFixed(1);
-            const radarChart = generateRadarChart(categoryScores);
             
+            // フォーム送信を実行
+            sendDataToForm(score, totalQuestions, percentage, results, categoryScores); 
+            
+            // NOTE: リダイレクトが成功すれば、以下の表示ロジックは実行されません。
+            const resultsDiv = document.getElementById('results');
+            const radarChart = generateRadarChart(categoryScores);
             resultsDiv.style.display = 'block';
 
-            // --- GASへのデータ送信を実行 ---
-            sendDataToGas(score, totalQuestions, percentage, categoryScores);
-            
-            // ... (HTML表示ロジックは省略) ...
             let analysisHTML = `
                 <h2>分野別 正答率分析（8分野）</h2>
-                <p>あなたの理解度を分野ごとに評価しました。特に赤色の分野は再学習を推奨します。</p>
+                <p>この結果は集計サーバーへ送信されます。データが記録された後、ブラウザの「戻る」ボタンでクイズに戻れます。</p>
                 <div class="analysis-detail">
                     <pre class="radar-chart">${radarChart}</pre>
                 </div>
@@ -650,13 +639,10 @@
                     ${totalQuestions}問中 ${score}問正解！
                 </div>
                 <p>正答率: ${percentage}%</p>
-                <button id="save-results-btn" class="save-btn">結果をテキストで保存</button>
                 <button class="submit-btn" onclick="clearLocalStorageAndResetForm()">もう一度挑戦する</button>
                 ${analysisHTML}
-                <p style="margin-top: 20px;">各問題の正解と解説は選択直後に表示されています。</p>
+                <p style="margin-top: 20px;">集計データが記録された後、ブラウザの「戻る」ボタンでクイズに戻り、結果を確認できます。</p>
             `;
-
-            document.getElementById('save-results-btn').addEventListener('click', () => saveResults(score, totalQuestions, percentage, results, categoryScores));
             document.getElementById('show-results-btn').style.display = 'none';
         }
 
@@ -669,47 +655,7 @@
                 location.reload();
             }
         }
-
-        function saveResults(score, totalQuestions, percentage, results, categoryScores) {
-            const timestamp = new Date().toLocaleString('ja-JP');
-            let content = `--- 東京国際空港 制限区域内安全クイズ 結果 ---\n`;
-            content += `受験日時: ${timestamp}\n`;
-            content += `総問題数: ${totalQuestions}問\n`;
-            content += `正解数: ${score}問\n`;
-            content += `正答率: ${percentage}%\n\n`;
-            
-            content += `--- 分野別正答率 ---\n`;
-            for (const group in categoryScores) {
-                const data = categoryScores[group];
-                if (data.total > 0) {
-                    const rate = (data.correct / data.total * 100).toFixed(0);
-                    content += `${group}: ${rate}% (${data.correct}/${data.total}問)\n`;
-                }
-            }
-            content += `\n--- 不正解問題リスト ---\n`;
-
-            results.forEach((res, index) => {
-                if (!res.isCorrect) {
-                    const q = quizData.questions[index];
-                    const rationale = q.answerOptions.find(opt => opt.isCorrect).rationale;
-                    content += `[問${index + 1} - ${getCategoryGroup(q.category)}]\n`;
-                    content += `問題: ${q.question}\n`;
-                    content += `解説: ${rationale}\n`;
-                    content += `------------------------\n`;
-                }
-            });
-
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const filename = `Quiz_Result_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.txt`;
-            
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
+        
         document.getElementById('show-results-btn').addEventListener('click', showResults);
         
         renderQuiz();
