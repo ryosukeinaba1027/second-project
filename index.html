@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>制限区域内安全クイズ（最終完全版）</title>
+    <title>制限区域内安全クイズ（全フィールド対応版）</title>
     <style>
+        /* スタイルシートは省略 */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7f6;
@@ -545,12 +546,13 @@
             const FORM_KEY = "1FAIpQLSeZ9tl8zyQQJyUujbDve0uqIcqvDBlJpryP2FyUmvPz-C7r5Q";
             const FORM_POST_URL = `https://docs.google.com/forms/d/e/${FORM_KEY}/formResponse`;
 
-            // ✅ 正しいフィールドIDを組み込みます
+            // ✅ 取得した正確なフィールドIDを組み込みます
             const ID_USER = 'entry.2125414563'; 
             const ID_SCORE = 'entry.1918104257'; 
             const ID_PERCENTAGE = 'entry.1237722946'; 
+            const ID_Q_ANSWERS = 'entry.840212971'; // Q Answers (設問ごと正誤文字列)
             
-            // 7分野のCorrect/Total フィールド
+            // 14個のカテゴリ Correct/Total フィールド
             const CAT_FIELDS = {
                 "航空機優先・接近": { C: 'entry.1691456569', T: 'entry.1535902522' },
                 "車両運行・一般ルール": { C: 'entry.856557345', T: 'entry.1422899614' },
@@ -563,16 +565,18 @@
             
             // ユーザーID入力 (今回は時刻で仮対応)
             const USER_IDENTIFIER = "ユーザー_" + new Date().toLocaleTimeString('ja-JP'); 
-            const qAnswersString = results.map(res => res.isCorrect ? "1" : "0").join(','); // Q1-Q10 正誤文字列 (未使用だが残す)
+            
+            // Q1-Q10の正誤を「1」か「0」のカンマ区切り文字列で作成
+            const qAnswersString = results.map(res => res.isCorrect ? "1" : "0").join(','); 
 
             // データペイロードの構築
             const payload = new URLSearchParams();
             payload.append(ID_USER, USER_IDENTIFIER);
             payload.append(ID_SCORE, `${score}/${total}`);
             payload.append(ID_PERCENTAGE, percentage + '%');
-            // payload.append(ID_Q_ANSWERS, qAnswersString); // Q1-Q10 正誤文字列はフォームに存在しないためコメントアウト
+            payload.append(ID_Q_ANSWERS, qAnswersString); // Q Answersを追加！
 
-            // 14個の個別フィールドを追加
+            // 14個の個別フィールドを追加 (ID・識別・資格はスキップ)
             for (const categoryName in categoryScores) {
                 if (categoryScores[categoryName].total > 0 && CAT_FIELDS[categoryName]) {
                     const data = categoryScores[categoryName];
